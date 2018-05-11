@@ -165,11 +165,13 @@ int main(int argc, char** argv)
   glUseProgram(program);
 
   const char* vertex_shader_code = STRINGIFY(
-    attribute vec3 pos;
+    attribute vec2 texcoord;
+	varying vec2 o_texcoord;
 
 	void main(void)
 	{
-	  gl_Position = vec4(pos, 1.0);
+	  o_texcoord = texcoord;
+	  gl_Position = vec4(texcoord, 1.0, 1.0);
 	}
   );
 
@@ -187,11 +189,14 @@ int main(int argc, char** argv)
   }
 
   const char* fragment_shader_code = STRINGIFY(
-    uniform vec4 color;
+	varying vec2 o_texcoord;
+	uniform sampler2D texture;
+	uniform vec2 tex_size;
 
 	void main(void)
 	{
-	  gl_FragColor = color;
+	  vec4 value = texture2D(texture, o_texcoord);
+	  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.0);
 	}
   );
 
@@ -219,13 +224,11 @@ int main(int argc, char** argv)
   else {
 	std::cerr << "Successfully linked program." << std::endl;
   }
-  
-  glUseProgram(program);
 
   /* Initialization of DevIL */
   if (ilGetInteger(IL_VERSION_NUM) < IL_VERSION) {
-	printf("wrong DevIL version \n");
-	return -1;
+	std::cerr << "Failed to use DevIL: Wrong version." << std::endl;
+	return EXIT_FAILURE;
   }
   ilInit(); 
   ILuint image = load_image(argv[1]);
@@ -236,8 +239,21 @@ int main(int argc, char** argv)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* We will use linear interpolation for minifying filter */
   glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 
 			   0, ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE, ilGetData()); /* Texture specification */
- 
- 
+
+  
+  glUseProgram(program);
+
+  GLuint vbo;
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  GLuint texcoord_loc = glGetAttribLocation(program, "texcoord");
+  
+  GLuint tex_loc = glGetUniformLocation(program, "texture");
+  glUniform1f(tex_loc, texId);
+
+  GLuint tex_size_loc = glGetUniformLocation(program, "tex_size");
+  glUniform2f(tex_size_loc, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT));
+
   // Cleanup
   /* Delete used resources and quit */
   ilDeleteImages(1, &image); /* Because we have already copied image data into texture data we can release memory used by image. */
