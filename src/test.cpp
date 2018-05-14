@@ -4,6 +4,9 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
+#include <fstream>
+#include <streambuf>
 
 #define STRINGIFY(x) #x
 
@@ -39,7 +42,10 @@ static const EGLint contextAttribs[] = {
   EGL_NONE
 };
 
-static bool check(GLuint object, GLenum to_check, void (*glGet__iv)(GLuint, GLenum, GLint*), void (*glGet__infoLog)(GLuint, GLsizei, GLsizei*, GLchar*), void (*glDelete__)(GLuint))
+static bool check(GLuint object, GLenum to_check,
+                  void (*glGet__iv)(GLuint, GLenum, GLint*),
+                  void (*glGet__infoLog)(GLuint, GLsizei, GLsizei*, GLchar*),
+                  void (*glDelete__)(GLuint))
 {
   GLint success = 0;
   glGet__iv(object, to_check, &success);
@@ -56,6 +62,62 @@ static bool check(GLuint object, GLenum to_check, void (*glGet__iv)(GLuint, GLen
 	return false;
   }
   return true;
+}
+
+static GLuint load_shaders(std::string vertex_shader_path,
+                           std::string fragment_shader_path)
+{
+    // Create Vertex shader
+    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    // Loading source
+    std::ifstream vertex_shader_file(vertex_shader_path);
+    std::string vertex_shader_code((std::istreambuf_iterator<char>(vertex_shader_file)),
+                     std::istreambuf_iterator<char>());
+    const char* vertex_code = vertex_shader_code.c_str();
+
+    glShaderSource(vertex_shader, 1, &vertex_code, NULL);
+    glCompileShader(vertex_shader);
+    if (!check(vertex_shader, GL_COMPILE_STATUS, glGetShaderiv, glGetShaderInfoLog, glDeleteShader)) {
+          std::cerr << "Failed to compile vertex shader." << std::endl;
+          return -1;
+    }
+    else {
+          std::cerr << "Successfully compilated vertex shader." << std::endl;
+    }
+
+    // Create Fragment shader
+    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    // Loading source
+    std::ifstream fragment_shader_file(fragment_shader_path);
+    std::string fragment_shader_code((std::istreambuf_iterator<char>(fragment_shader_file)),
+                     std::istreambuf_iterator<char>());
+    const char* fragment_code = fragment_shader_code.c_str();
+
+    glShaderSource(fragment_shader, 1, &fragment_code, NULL);
+    glCompileShader(fragment_shader);
+    if (!check(fragment_shader, GL_COMPILE_STATUS, glGetShaderiv, glGetShaderInfoLog, glDeleteShader)) {
+          std::cerr << "Failed to compile fragment shader." << std::endl;
+          return -1;
+    }
+    else {
+          std::cerr << "Successfully compilated fragment shader." << std::endl;
+    }
+
+    // Create a shader program
+    GLuint program = glCreateProgram();
+    glUseProgram(program);
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+    glLinkProgram(program);
+    if (!check(program, GL_LINK_STATUS, glGetProgramiv, glGetProgramInfoLog, glDeleteProgram)) {
+          std::cerr << "Failed to link program." << std::endl;
+          return -1;
+    }
+    else {
+          std::cerr << "Successfully linked program." << std::endl;
+    }
+
+    return program;
 }
 
 
@@ -79,8 +141,58 @@ static int load_image(char* filename)
   return image;
 }
 
+GLuint init_quad()
+{
+    // Generating Vertex Buffer Objects
+    GLuint vertex_buffer;
+    glGenBuffers(1, &vertex_buffer);
+
+    static const float vertices[] = {
+        -1.0f, -1.0f,
+        1.0f, -1.0f,
+        -1.0f,  1.0f,
+        -1.0f,  1.0f,
+        1.0f, -1.0f,
+        1.0f,  1.0f,
+    };
+    // Binding first (and only) buffer vertices & transfering data to VRAM
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, vertices, GL_STATIC_DRAW);
+
+    return vertex_buffer;
+
+}
+
+void display_quad(GLuint program, GLuint vertex_buffer)
+{
+    GLuint vertex_loc = glGetAttribLocation(program, "vtx_position");
+    if (vertex_loc >= 0)
+    {
+        std::cerr << "Segfault 01" << std::endl;
+        glEnableVertexAttribArray(vertex_loc);
+        std::cerr << "Segfault 03" << std::endl;
+        glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+        std::cerr << "Segfault 02" << std::endl;
+        glVertexAttribPointer(vertex_loc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    }
+    std::cerr << "Segfault 04" << std::endl;
+    glDrawElements(GL_TRIANGLES, 6, GL_FLOAT, 0);
+    std::cerr << "Segfault 05" << std::endl;
+    if (vertex_loc >= 0)
+    {
+        glDisableVertexAttribArray(vertex_loc);
+    }
+}
+
+
 int main(int argc, char** argv)
 {
+
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <vertex shader path> <fragment shader path> <image path>" << std::endl;
+        return EXIT_FAILURE;
+    }
+
   // Get an EGL valid display
   EGLDisplay display;
   display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -161,68 +273,12 @@ int main(int argc, char** argv)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Create a shader program
-  GLuint program = glCreateProgram();
-  glUseProgram(program);
-
-  const char* vertex_shader_code = STRINGIFY(
-    attribute vec2 texcoord;
-	varying vec2 o_texcoord;
-
-	void main(void)
-	{
-	  o_texcoord = texcoord;
-	  gl_Position = vec4(texcoord, 1.0, 1.0);
-	}
-  );
-
-  // Create sub shader: vertex shader
-  GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_shader, 1, &vertex_shader_code, NULL);
-  glCompileShader(vertex_shader);
-  if (!check(vertex_shader, GL_COMPILE_STATUS, glGetShaderiv, glGetShaderInfoLog, glDeleteShader)) {
-	std::cerr << "Failed to compile vertex shader." << std::endl;
-	eglTerminate(display);
-	return EXIT_FAILURE;
-  }
-  else {
-	std::cerr << "Successfully compilated vertex shader." << std::endl;
-  }
-
-  const char* fragment_shader_code = STRINGIFY(
-	varying vec2 o_texcoord;
-	uniform sampler2D texture;
-	uniform vec2 tex_size;
-
-	void main(void)
-	{
-	  vec4 value = texture2D(texture, o_texcoord);
-	  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.0);
-	}
-  );
-
-  // Create sub shader: fragment shader
-  GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_shader, 1, &fragment_shader_code, NULL);
-  glCompileShader(fragment_shader);
-  if (!check(fragment_shader, GL_COMPILE_STATUS, glGetShaderiv, glGetShaderInfoLog, glDeleteShader)) {
-	std::cerr << "Failed to compile fragment shader." << std::endl;
-	eglTerminate(display);
-	return EXIT_FAILURE;
-  }
-  else {
-	std::cerr << "Successfully compilated fragment shader." << std::endl;
-  }
-
-  glAttachShader(program, vertex_shader);
-  glAttachShader(program, fragment_shader);
-  glLinkProgram(program);
-  if (!check(program, GL_LINK_STATUS, glGetProgramiv, glGetProgramInfoLog, glDeleteProgram)) {
-	std::cerr << "Failed to link program." << std::endl;
-	eglTerminate(display);
-	return EXIT_FAILURE;
-  }
-  else {
-	std::cerr << "Successfully linked program." << std::endl;
+  GLuint program = load_shaders(std::string(argv[1]), std::string(argv[2]));
+  if (program == -1)
+  {
+      std::cerr << "Failed to create a shader program. See above for more details." << std::endl;
+      eglTerminate(display);
+      return EXIT_FAILURE;
   }
 
   /* Initialization of DevIL */
@@ -230,8 +286,9 @@ int main(int argc, char** argv)
 	std::cerr << "Failed to use DevIL: Wrong version." << std::endl;
 	return EXIT_FAILURE;
   }
+
   ilInit(); 
-  ILuint image = load_image(argv[1]);
+  ILuint image = load_image(argv[3]);
   GLuint texId;
   glGenTextures(1, &texId); /* Texture name generation */
   glBindTexture(GL_TEXTURE_2D, texId); /* Binding of texture name */
@@ -240,19 +297,84 @@ int main(int argc, char** argv)
   glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 
 			   0, ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE, ilGetData()); /* Texture specification */
 
-  
-  glUseProgram(program);
 
-  GLuint vbo;
-  glGenBuffers(1, &vbo);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  GLuint texcoord_loc = glGetAttribLocation(program, "texcoord");
-  
-  GLuint tex_loc = glGetUniformLocation(program, "texture");
-  glUniform1f(tex_loc, texId);
+  GLuint vertex_buffer = init_quad();
 
-  GLuint tex_size_loc = glGetUniformLocation(program, "tex_size");
-  glUniform2f(tex_size_loc, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT));
+  //1. Generate FBO and bind it.
+  GLuint framebufferId;
+  glGenFramebuffers(1, &framebufferId);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebufferId);
+
+  //2. Init texture
+  GLuint renderedTeture;
+  glGenTextures(1, &renderedTeture);
+  //3. Create texture as an empty image
+  glBindTexture(GL_TEXTURE_2D, renderedTeture);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT), 0,GL_RGB, GL_UNSIGNED_BYTE, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //4. Attach the texture to FBO color attachment
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderedTeture, 0);
+  // Always check that our framebuffer is ok
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  {
+      std::cerr << "Failed to construct FBO" << std::endl;
+      return false;
+  }
+
+  //8. switch back to original framebuffer
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  /*
+
+  // The fullscreen quad's FBO
+  GLuint quad_VertexArrayID;
+  glGenVertexArrays(1, &quad_VertexArrayID);
+  glBindVertexArray(quad_VertexArrayID);
+
+  static const GLfloat vertices_data[] = {
+      -1.0f, -1.0f, 0.0f,
+      1.0f, -1.0f, 0.0f,
+      -1.0f,  1.0f, 0.0f,
+      -1.0f,  1.0f, 0.0f,
+      1.0f, -1.0f, 0.0f,
+      1.0f,  1.0f, 0.0f,
+  };
+
+  GLuint quad_vertexbuffer;
+  glGenBuffers(1, &quad_vertexbuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), vertices_data, GL_STATIC_DRAW);
+
+
+  do {
+      glUseProgram(program);
+
+      GLuint texture_loc = glGetUniformLocation(program, "texture");
+      GLuint width_loc = glGetUniformLocation(program, "width");
+      GLuint height_loc = glGetUniformLocation(program, "height");
+
+      glUniform1i(texture_loc, texId);
+      glUniform1i(width_loc, ilGetInteger(IL_IMAGE_WIDTH));
+      glUniform1i(height_loc, ilGetInteger(IL_IMAGE_HEIGHT));
+
+      GLuint vertex_loc = glGetAttribLocation(program, "vtx_position");
+      glEnableVertexAttribArray(vertex_loc);
+      glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+      glVertexAttribPointer(vertex_loc, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+
+      glDisableVertexAttribArray(vertex_loc);
+
+      // Render to our framebuffer
+      glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+      glViewport(0, 0, ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT));
+  } while (true);
+  */
+
+
+  display_quad(program, vertex_buffer);
 
   // Cleanup
   /* Delete used resources and quit */
