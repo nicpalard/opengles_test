@@ -14,9 +14,9 @@ inline unsigned char* load_ppm(char* file_name, uint &width, uint &height)
   uint max_value;
   file >> magic_number >> width >> height >> max_value;
   if (magic_number != "P6")
-	throw std::invalid_argument("Current PPM Image format is " + magic_number  + " and must be P6");
+	  throw std::invalid_argument("Current PPM Image format is " + magic_number  + " and must be P6");
   if (max_value > 255)
-	throw std::invalid_argument("Max value is " + std::to_string(max_value) + "but it should not be > 255");
+	  throw std::invalid_argument("Max value is " + std::to_string(max_value) + "but it should not be > 255");
 
   size_t size = width * height * 3;
   unsigned char* data = new unsigned char[size];

@@ -9,6 +9,10 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    // Prepare image texture
+    uint image_width, image_height;
+    unsigned char* image = load_ppm(argv[3], image_width, image_height);
+
     //1. Get a EGL valid display
     EGLDisplay display;
     display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -50,7 +54,7 @@ int main(int argc, char** argv)
     }
 
     //4. Creating an OpenGL Render Surface with surface attributes defined above to draw to.
-    EGLint pbufferAttributes[] = {EGL_WIDTH, 1080, EGL_HEIGHT, 720, EGL_NONE};
+    EGLint pbufferAttributes[] = {EGL_WIDTH, (int)image_width, EGL_HEIGHT, (int)image_height, EGL_NONE};
     EGLSurface surface = eglCreatePbufferSurface(display, config, pbufferAttributes);
     if (surface == EGL_NO_SURFACE) {
         std::cerr << "Failed to create EGL Surface." << std::endl
@@ -87,39 +91,51 @@ int main(int argc, char** argv)
         eglTerminate(display);
         return EXIT_FAILURE;
     }
-    // Getting location of our uniform variables
-    GLuint texture_loc = glGetAttribLocation(program, "texture");
-    GLuint width_loc = glGetAttribLocation(program, "width");
-    GLuint height_loc = glGetAttribLocation(program, "height");
 
-    // Initialize screen quad
-    Quad q; q.init();
-    
+    // Getting location of our uniform variables
+    GLuint texture_loc = glGetUniformLocation(program, "texture");
+    GLuint width_loc = glGetUniformLocation(program, "width");
+    GLuint height_loc = glGetUniformLocation(program, "height");
+
     /* Drawing part */
     GLuint fbo_render_texture;
-    GLuint fbo = init_fbo(1080, 720, fbo_render_texture);
+    GLuint fbo = init_fbo((int)image_width, (int)image_height, fbo_render_texture);
     if (!fbo)
     {
         eglTerminate(display);
         return EXIT_FAILURE;
     }
+
+    // Create texture from image data
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    // Switching back to our classic buffer with scene rendered in FBO render texture
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Now we can use our post processing shader since we have our scene in a texture.
     glUseProgram(program);
-    glBindTexture(GL_TEXTURE_2D, fbo_render_texture);
-    // Since we just binded the texture, the id is 0
-    glUniform1i(texture_loc, GL_TEXTURE0);
-    glUniform1i(width_loc, 1080);
-    glUniform1i(height_loc, 720);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
 
+    glUniform1i(texture_loc, image_texture);
+    glUniform1i(width_loc, (int)image_width);
+    glUniform1i(height_loc, (int)image_height);
+    
+    Quad q; q.init();
     q.display(program);
 
+    unsigned char* data = new unsigned char[image_width * image_height * 3];
+    glReadPixels(0, 0, image_width, image_height, GL_RGB, GL_UNSIGNED_BYTE, data);
+    
+    // Switching back to our classic buffer with scene rendered in FBO render texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    write_ppm((char*)("result.ppm"), data, image_width, image_height);
     delete_fbo(fbo, fbo_render_texture);
 }
