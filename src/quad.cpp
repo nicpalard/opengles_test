@@ -20,9 +20,9 @@ Quad::~Quad()
 void Quad::init()
 {
     glGenBuffers(1, &vbo);
-
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, mPos, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Quad::setPos(unsigned int id, float x, float y)

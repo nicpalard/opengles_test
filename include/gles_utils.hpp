@@ -102,13 +102,54 @@ inline GLuint load_shaders(std::string vertex_shader_path,
     glLinkProgram(program);
     if (!check(program, GL_LINK_STATUS, glGetProgramiv, glGetProgramInfoLog, glDeleteProgram)) {
           std::cerr << "Failed to link program." << std::endl;
-          return -1;
+          return 0;
     }
     else {
           std::cerr << "Successfully linked program." << std::endl;
     }
 
     return program;
+}
+
+inline int init_fbo(int width, int height, GLuint fbo_render_texture)
+{
+    //1. Generate Frame Buffer Object
+    GLuint fboId;
+    glGenFramebuffers(1, &fboId);
+    //2. Bind it
+    glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+
+    //3. Generate texture
+    glGenTextures(1, &fbo_render_texture);
+    //4. Bind it
+    glBindTexture(GL_TEXTURE_2D, fbo_render_texture);
+    //5. Set texture properties
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    
+    //6. Attach texture to FBO color attachment
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_render_texture, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cerr << "Failed to construct FBO." << std::endl;
+        return 0;
+    }
+
+    //7. Switch back to original texture & framebuffer
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return fboId;
+}
+
+inline void delete_fbo(GLuint fbo, GLuint fbo_render_texture)
+{
+    glDeleteTextures(1, &fbo_render_texture);
+    glDeleteFramebuffers(1, &fbo);
+}
+
+inline void bla() {
 }
 
 #endif

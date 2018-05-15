@@ -82,18 +82,44 @@ int main(int argc, char** argv)
     }
 
     GLuint program = load_shaders(argv[1], argv[2]);
-    if (program == -1) {
+    if (!program) {
         std::cerr << "Failed to create shader program. See above for more details" << std::endl;
         eglTerminate(display);
         return EXIT_FAILURE;
     }
+    // Getting location of our uniform variables
+    GLuint texture_loc = glGetAttribLocation(program, "texture");
+    GLuint width_loc = glGetAttribLocation(program, "width");
+    GLuint height_loc = glGetAttribLocation(program, "height");
 
-    int size = 3 * 1080 * 720;
-    unsigned char* data = new unsigned char[size];
+    // Initialize screen quad
+    Quad q; q.init();
+    
+    /* Drawing part */
+    GLuint fbo_render_texture;
+    GLuint fbo = init_fbo(1080, 720, fbo_render_texture);
+    if (!fbo)
+    {
+        eglTerminate(display);
+        return EXIT_FAILURE;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    // Switching back to our classic buffer with scene rendered in FBO render texture
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
-    //eglSwapBuffers(display, surface);
-    glReadPixels(0, 0, 1080, 720, GL_RGB, GL_UNSIGNED_BYTE, data);
 
-    write_ppm((char*)("final.ppm"), data, 1080, 720);
+    // Now we can use our post processing shader since we have our scene in a texture.
+    glUseProgram(program);
+    glBindTexture(GL_TEXTURE_2D, fbo_render_texture);
+    // Since we just binded the texture, the id is 0
+    glUniform1i(texture_loc, GL_TEXTURE0);
+    glUniform1i(width_loc, 1080);
+    glUniform1i(height_loc, 720);
+
+    q.display(program);
+
+    delete_fbo(fbo, fbo_render_texture);
 }
