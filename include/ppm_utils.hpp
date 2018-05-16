@@ -7,6 +7,13 @@
 #include <stdexcept>
 #include <string>
 
+/**
+    Reads a PPM file into a buffer
+    @param file_name the ppm file to read from. Extension must be .ppm
+    @param width a reference to the width of the loaded image.
+    @param height a reference to the height of the loaded image.
+    @return the data as un unsigned char buffer (8 bits)
+*/
 inline unsigned char* load_ppm(char* file_name, uint &width, uint &height)
 {
   std::ifstream file(file_name);
@@ -14,9 +21,9 @@ inline unsigned char* load_ppm(char* file_name, uint &width, uint &height)
   uint max_value;
   file >> magic_number >> width >> height >> max_value;
   if (magic_number != "P6")
-	  throw std::invalid_argument("Current PPM Image format is " + magic_number  + " and must be P6");
+    throw std::invalid_argument("Current PPM Image format is " + magic_number  + " and must be P6");
   if (max_value > 255)
-	  throw std::invalid_argument("Max value is " + std::to_string(max_value) + "but it should not be > 255");
+    throw std::invalid_argument("Max value is " + std::to_string(max_value) + "but it should not be > 255");
 
   size_t size = width * height * 3;
   unsigned char* data = new unsigned char[size];
@@ -24,6 +31,13 @@ inline unsigned char* load_ppm(char* file_name, uint &width, uint &height)
   return data;
 }
 
+/**
+    Writes a PPM file from a buffer
+    @param file_name the file to write in. Extension must be .ppm
+    @param data the unsigned char* buffer that contains image data to write in the file.
+    @param width the width of the image.
+    @param height the height of the image.
+*/
 inline void write_ppm(char* file_name, unsigned char* data, int width, int height)
 {
   std::ofstream file(file_name);
@@ -35,6 +49,12 @@ inline void write_ppm(char* file_name, unsigned char* data, int width, int heigh
   file.write((char*)(&data[0]), size);
 }
 
+/**
+    Utils function to convert a uchar buffer into an float buffer
+    @param data the buffer that contains image data
+    @param size the total size of the buffer
+    @return the buffer that contains the data converted from unsigned char to float.
+*/
 inline float* uchar_to_float(unsigned char* data, uint size)
 {
   float* float_data = new float[size];
@@ -45,6 +65,12 @@ inline float* uchar_to_float(unsigned char* data, uint size)
   return float_data;
 }
 
+/**
+    Utils function to convert a float buffer into an uchar buffer
+    @param data the buffer that contains image data
+    @param size the total size of the buffer
+    @return the buffer that contains the data converted from float to unsigned char.
+*/
 inline unsigned char* float_to_uchar(float* data, uint size)
 {
   unsigned char* uchar_data = new unsigned char[size];
@@ -58,6 +84,13 @@ inline unsigned char* float_to_uchar(float* data, uint size)
   return uchar_data;
 }
 
+/**
+    Utils function to convert a RGB image to GRAYSCALE image
+    @param data the buffer that contains image data
+    @param width the width of the image
+    @param height the height of the image
+    @return the converted data buffer
+*/
 inline unsigned char* rgb_to_gray(unsigned char* data, uint width, uint height)
 {
   unsigned char* data_gray = new unsigned char[width * height];
@@ -70,6 +103,13 @@ inline unsigned char* rgb_to_gray(unsigned char* data, uint width, uint height)
   return data_gray;
 }
 
+/**
+    Utils function to convert a GRAYSCALE image to 3CHAN (RGB) image
+    @param data the buffer that contains image data
+    @param width the width of the image
+    @param height the height of the image
+    @return the converted data buffer
+*/
 inline unsigned char* gray_to_rgb(unsigned char* data, uint width, uint height)
 {
   unsigned char* data_rgb = new unsigned char[width * height * 3];

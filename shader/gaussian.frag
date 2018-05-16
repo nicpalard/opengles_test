@@ -12,9 +12,9 @@ void main() {
     vec2 texcoord = vec2(gl_FragCoord.x/width, gl_FragCoord.y/height);
     vec3 color = texture2D(texture, texcoord).rgb;
 
-    // Since we are between -1 and 1, moving from one pixel to another requires new units
-    float hstep = 1/height;
-    float wstep = 1/width;
+    // Since we are between -1 and 1, moving from one pixel to another requires custom shifting
+    float hstep = 1.0/height;
+    float wstep = 1.0/width;
     vec2 left  = texcoord - vec2(wstep, 0);
     vec2 right = texcoord + vec2(wstep, 0);
     vec2 top   = texcoord - vec2(0, hstep);
@@ -39,5 +39,5 @@ void main() {
             lbot_color + rbot_color + 
             color;
 
-    gl_FragColor = vec4(sum/9, 1.0);
+    gl_FragColor = vec4(sum/9.0, 1.0);
 }

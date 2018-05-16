@@ -10,8 +10,8 @@ int main(int argc, char** argv)
     }
 
     // Prepare image texture
-    uint image_width, image_height;
-    unsigned char* image = load_ppm(argv[3], image_width, image_height);
+    int image_width, image_height;
+    unsigned char* image = load_ppm(argv[3], (uint &)image_width, (uint &)image_height);
 
     //1. Get a EGL valid display
     EGLDisplay display;
@@ -54,7 +54,7 @@ int main(int argc, char** argv)
     }
 
     //4. Creating an OpenGL Render Surface with surface attributes defined above to draw to.
-    EGLint pbufferAttributes[] = {EGL_WIDTH, (int)image_width, EGL_HEIGHT, (int)image_height, EGL_NONE};
+    EGLint pbufferAttributes[] = {EGL_WIDTH, image_width, EGL_HEIGHT, image_height, EGL_NONE};
     EGLSurface surface = eglCreatePbufferSurface(display, config, pbufferAttributes);
     if (surface == EGL_NO_SURFACE) {
         std::cerr << "Failed to create EGL Surface." << std::endl
@@ -123,8 +123,8 @@ int main(int argc, char** argv)
     glBindTexture(GL_TEXTURE_2D, image_texture);
     glUniform1i(texture_loc, 0);
     
-    glUniform1i(width_loc, (int)image_width);
-    glUniform1i(height_loc, (int)image_height);
+    glUniform1i(width_loc, image_width);
+    glUniform1i(height_loc, image_height);
     
     Quad q; q.init();
     q.display(program);
