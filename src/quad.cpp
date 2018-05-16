@@ -7,9 +7,16 @@ using namespace std;
 Quad::Quad()
 {
     setPos     (0,-1.f,-1.f);
-    setPos     (1, 1.f,-1.f);
-    setPos     (2, 1.f, 1.f);
-    setPos     (3,-1.f, 1.f);
+    setPos     (1,-1.f, 1.f);
+    setPos     (2, 1.f,-1.f);
+    setPos     (3, 1.f, 1.f);
+
+    mIndices[0] = 0;
+    mIndices[1] = 1;
+    mIndices[2] = 2;
+    mIndices[3] = 0;
+    mIndices[4] = 2;
+    mIndices[5] = 3;
 }
 
 Quad::~Quad()
@@ -44,9 +51,13 @@ void Quad::display(GLuint program)
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexAttribPointer(vertex_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
     }
-    glDrawElements(GL_TRIANGLES, 6, GL_FLOAT, 0);
+
+    //glDrawElements(GL_TRIANGLES, 4, GL_FLOAT, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
     if (vertex_loc >= 0)
     {
         glDisableVertexAttribArray(vertex_loc);
     }
+
 }

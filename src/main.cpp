@@ -121,8 +121,8 @@ int main(int argc, char** argv)
     
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, image_texture);
-
-    glUniform1i(texture_loc, image_texture);
+    glUniform1i(texture_loc, 0);
+    
     glUniform1i(width_loc, (int)image_width);
     glUniform1i(height_loc, (int)image_height);
     
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 
     unsigned char* data = new unsigned char[image_width * image_height * 3];
     glReadPixels(0, 0, image_width, image_height, GL_RGB, GL_UNSIGNED_BYTE, data);
-    
+
     // Switching back to our classic buffer with scene rendered in FBO render texture
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

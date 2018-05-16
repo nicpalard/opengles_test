@@ -16,6 +16,7 @@ public:
 
 private:
     float mPos[8];
+    int mIndices[6];
     GLuint vbo;
 };
 
