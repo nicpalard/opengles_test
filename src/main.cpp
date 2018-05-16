@@ -9,7 +9,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    // Prepare image texture
+    //0. Prepare image texture
     int image_width, image_height;
     unsigned char* image = load_ppm(argv[3], (uint &)image_width, (uint &)image_height);
 
@@ -85,6 +85,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    //8. Load shaders
     GLuint program = load_shaders(argv[1], argv[2]);
     if (!program) {
         std::cerr << "Failed to create shader program. See above for more details" << std::endl;
@@ -92,12 +93,13 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    // 9. Draw
     // Getting location of our uniform variables
     GLuint texture_loc = glGetUniformLocation(program, "texture");
     GLuint width_loc = glGetUniformLocation(program, "width");
     GLuint height_loc = glGetUniformLocation(program, "height");
 
-    /* Drawing part */
+    // Create a FBO that will allow us to do offscreen rendering
     GLuint fbo_render_texture;
     GLuint fbo = init_fbo((int)image_width, (int)image_height, fbo_render_texture);
     if (!fbo)
@@ -126,9 +128,12 @@ int main(int argc, char** argv)
     glUniform1i(width_loc, image_width);
     glUniform1i(height_loc, image_height);
     
-    Quad q; q.init();
+    // Create fullscreen quad to trigger rasterisation (use of vertex and fragment shaders)
+    Quad q; 
+    q.init();
     q.display(program);
 
+    // Once rasterisation is done, data have been generated and it is now possible to transfer them back from VRAM to memory.
     unsigned char* data = new unsigned char[image_width * image_height * 3];
     glReadPixels(0, 0, image_width, image_height, GL_RGB, GL_UNSIGNED_BYTE, data);
 
@@ -137,5 +142,15 @@ int main(int argc, char** argv)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     write_ppm((char*)("result.ppm"), data, image_width, image_height);
+    
+    //10. Clean
+    glDeleteTextures(1, &image_texture);
+    glDeleteProgram(program);
+    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroySurface(display, surface);
+    eglDestroyContext(display, context);
+    eglTerminate(display);
     delete_fbo(fbo, fbo_render_texture);
+
+    return EXIT_SUCCESS;
 }

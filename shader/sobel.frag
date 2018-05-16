@@ -1,5 +1,10 @@
 #version 130
 
+/**
+    Sobel Edge Detection Fragment Shader
+    GLSL implementation of the sobel edge detection
+*/
+
 #ifdef GL_ES
 precision mediump float
 #endif
@@ -33,11 +38,9 @@ void main() {
     vec3 lbot_color  = texture2D(texture, lbot).rgb;
     vec3 rbot_color  = texture2D(texture, rbot).rgb;
 
-    vec3 sum = left_color + right_color + 
-            top_color + bot_color + 
-            ltop_color + rtop_color + 
-            lbot_color + rbot_color + 
-            color;
+    vec3 sobel_h = rtop_color + 2.0 * right_color + rbot_color - (ltop_color + 2.0 * left_color + lbot_color);
+    vec3 sobel_v = ltop_color + 2.0 * top_color + rtop_color - (lbot_color + 2.0 * bot_color + rbot_color);
+    vec3 sobel = sqrt(sobel_h * sobel_h + sobel_v * sobel_v);
 
-    gl_FragColor = vec4(sum/9.0, 1.0);
+    gl_FragColor = vec4(1.0 - sobel, 1.0);
 }

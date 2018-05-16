@@ -1,5 +1,9 @@
 #version 130
 
+/**
+    Passthrough Vertex Shader
+*/
+
 attribute vec2 vtx_position;
 
 void main() {
