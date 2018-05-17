@@ -1,17 +1,25 @@
+#include <opencv2/opencv.hpp>
+
 #include "quad.hpp"
 #include "gles_utils.hpp"
-#include "ppm_utils.hpp"
+#include "image_utils.hpp"
 
 int main(int argc, char** argv)
 {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <vertex shader path> <fragment shader path> <image path>" << std::endl;
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <vertex shader path> <fragment shader path> <image path> <output file>" << std::endl;
         return EXIT_FAILURE;
     }
 
     //0. Prepare image texture
     int image_width, image_height;
-    unsigned char* image = load_ppm(argv[3], (uint &)image_width, (uint &)image_height);
+    //unsigned char* image = load_ppm(argv[3], (uint &)image_width, (uint &)image_height);*
+    cv::Mat image_cv = cv::imread(argv[3], cv::IMREAD_UNCHANGED);
+    cv::Mat image_rgb; cv::cvtColor(image_cv, image_rgb, CV_BGRA2RGB);
+    image_width = image_rgb.cols;
+    image_height = image_rgb.rows;
+    unsigned char* image = new unsigned char[image_width * image_height * 3];
+    image = image_rgb.data;
 
     //1. Get a EGL valid display
     EGLDisplay display;
@@ -141,7 +149,11 @@ int main(int argc, char** argv)
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    write_ppm((char*)("result.ppm"), data, image_width, image_height);
+    // Save image (optional)
+    //write_ppm((char*)("result.ppm"), data, image_width, image_height);
+    cv::Mat im_res;
+    cv::cvtColor(cv::Mat(image_height, image_width, CV_8UC3, data), im_res, CV_RGB2BGRA);
+    cv::imwrite(argv[4], im_res);
     
     //10. Clean
     glDeleteTextures(1, &image_texture);

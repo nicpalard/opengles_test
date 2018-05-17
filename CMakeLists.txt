@@ -1,17 +1,37 @@
-cmake_minimum_required(VERSION 3.2)
-project(IPOGLES)
+cmake_minimum_required (VERSION 3.2)
+project (IPOGLES)
 
-set(CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 11)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake/module)
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake/module)
 
 find_package (OpenGLES2 REQUIRED)
-set(LIBRARIES GLESv2 EGL)
+set (LIBRARIES GLESv2 EGL)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+find_package( OpenCV REQUIRED core opencv_imgcodecs)
+if (NOT OPENCV_FOUND)
+        message(FATAL_ERROR, "OpenCV not found.")
+endif()
 
-file (GLOB IPOGLES_SOURCES src/*.cpp)
-file (GLOB IPOGLES_HEADERS include/*.hpp)
+include_directories (${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_executable(ipogles ${IPOGLES_SOURCES} ${IPOGLES_HEADERS})
-target_link_libraries(ipogles ${CMAKE_SOURCE_DIR}/lib/libSOIL.a ${LIBRARIES})
+file (GLOB SOURCES src/*.cpp)
+file (GLOB HEADERS include/*.hpp)
+file (GLOB SHADERS shader/*)
+
+set (IPO_SOURCES
+        src/ipogles.cpp
+        src/quad.cpp
+)
+
+set (BENCH_SOURCES
+        src/bench.cpp
+        src/quad.cpp
+)
+
+add_executable (ipogles ${IPO_SOURCES} ${HEADERS} ${SHADERS})
+target_link_libraries (ipogles ${LIBRARIES} ${OpenCV_LIBS})
+add_custom_target (shaders ${SHADERS})
+
+add_executable (ip_bench ${BENCH_SOURCES} ${HEADERS})
+target_link_libraries (ip_bench ${LIBRARIES})

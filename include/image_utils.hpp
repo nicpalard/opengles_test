@@ -1,5 +1,5 @@
-#ifndef _PPM_UTILS_H_
-#define _PPM_UTILS_H_
+#ifndef _IMAGE_UTILS_H_
+#define _IMAGE_UTILS_H_
 
 #include <iostream>
 #include <fstream>
@@ -122,6 +122,16 @@ inline unsigned char* gray_to_rgb(unsigned char* data, uint width, uint height)
   }
   
   return data_rgb;
+}
+
+inline float* generate_random_image(uint width, uint height, uint channel)
+{
+  float* img = new float[width * height * channel];
+  for (int i = 0 ; i < width * height * channel ; ++i)
+  {
+    img[i] = rand()%256;
+  }
+  return img;
 }
 
 #endif

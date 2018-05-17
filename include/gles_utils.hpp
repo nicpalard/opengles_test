@@ -75,6 +75,11 @@ inline GLuint load_shaders(std::string vertex_shader_path,
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     // Loading source
     std::ifstream vertex_shader_file(vertex_shader_path);
+    if (!vertex_shader_file.is_open())
+    {
+        std::cerr << "Could not open vertex shader file: '" << vertex_shader_path << " '. Invalid file." << std::endl;
+        return 0;
+    }
     std::string vertex_shader_code((std::istreambuf_iterator<char>(vertex_shader_file)),
                      std::istreambuf_iterator<char>());
     const char* vertex_code = vertex_shader_code.c_str();
@@ -93,6 +98,11 @@ inline GLuint load_shaders(std::string vertex_shader_path,
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     // Loading source
     std::ifstream fragment_shader_file(fragment_shader_path);
+    if (!fragment_shader_file.is_open())
+    {
+        std::cerr << "Could not open fragment shader file: '" << fragment_shader_path << " '. Invalid file." << std::endl;
+        return 0;
+    }
     std::string fragment_shader_code((std::istreambuf_iterator<char>(fragment_shader_file)),
                      std::istreambuf_iterator<char>());
     const char* fragment_code = fragment_shader_code.c_str();
@@ -101,7 +111,7 @@ inline GLuint load_shaders(std::string vertex_shader_path,
     glCompileShader(fragment_shader);
     if (!check(fragment_shader, GL_COMPILE_STATUS, glGetShaderiv, glGetShaderInfoLog, glDeleteShader)) {
           std::cerr << "Failed to compile fragment shader." << std::endl;
-          return -1;
+          return 0;
     }
     else {
           std::cerr << "Successfully compilated fragment shader." << std::endl;
