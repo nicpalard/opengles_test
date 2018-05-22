@@ -29,9 +29,18 @@ set (BENCH_SOURCES
         src/quad.cpp
 )
 
+set (REDIS_SOURCES
+        src/redis.cpp
+        src/quad.cpp
+)
+
 add_executable (ipogles ${IPO_SOURCES} ${HEADERS} ${SHADERS})
 target_link_libraries (ipogles ${LIBRARIES} ${OpenCV_LIBS})
-add_custom_target (shaders ${SHADERS})
 
 add_executable (ip_bench ${BENCH_SOURCES} ${HEADERS})
 target_link_libraries (ip_bench ${LIBRARIES})
+
+add_executable (ip_redis ${REDIS_SOURCES} ${HEADERS})
+target_link_libraries (ip_redis ${LIBRARIES} hiredis)
+
+add_custom_target (shaders ${SHADERS})

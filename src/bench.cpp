@@ -1,9 +1,9 @@
 #include <iomanip>
+#include <chrono>
 
 #include "quad.hpp"
 #include "gles_utils.hpp"
 #include "image_utils.hpp"
-#include "bench.hpp"
 
 int main(int argc, char** argv)
 {
@@ -91,13 +91,19 @@ int main(int argc, char** argv)
         eglTerminate(display);
         return EXIT_FAILURE;
     }
+
+    //--------------- BENCH SETUP ----------------
     std::cout << std::endl
                 << "** Starting benchmark **" << std::endl
-                << "Convolution using gaussian kernel of size" << std::endl
+                << "Convolution using " << argv[2] << std::endl
                 << "---------------------------------------------" << std::endl
-                << "Size\t\tSize (MB)\tTime (ms)\tBandwidth (MB/s)" << std::endl
+                << "Size\t\tSize (MB)\tCTime (ms)\tTTime (ms)\tTotal (ms)\tBandwidth (MB/s)" << std::endl
                 << std::fixed << std::setprecision(3) << std::setfill('0');
 
+    typedef std::chrono::high_resolution_clock Time;
+    typedef std::chrono::duration<double> fsec;
+    typedef std::chrono::milliseconds ms;
+    //--------------- BENCH SETUP ----------------
 
     GLuint fbo, fbo_render_texture, image_texture;
     for (int N = 128 ; N < 10000 ; N+=N)
@@ -107,8 +113,10 @@ int main(int argc, char** argv)
         int size = image_width * image_height * 3;
         unsigned char* image = float_to_uchar(generate_random_image(image_width, image_height, 3), size);
 
-        Timer t;
-        t.start();
+
+        //--------------- BENCH TOTAL TIME ----------------
+        auto total_start = Time::now();
+
         // 9. Draw
         // Getting location of our uniform variables
         GLuint texture_loc = glGetUniformLocation(program, "texture");
@@ -128,6 +136,9 @@ int main(int argc, char** argv)
         glGenTextures(1, &image_texture);
         glBindTexture(GL_TEXTURE_2D, image_texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        //--------------- BENCH TRANSFER TIME ----------------
+        auto transfer_start = Time::now();
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -143,23 +154,40 @@ int main(int argc, char** argv)
         glUniform1i(width_loc, image_width);
         glUniform1i(height_loc, image_height);
 
+        //--------------- BENCH COMPUTE TIME ----------------
+        auto render_start = Time::now();
+
         // Create fullscreen quad to trigger rasterisation (use of vertex and fragment shaders)
         Quad q;
         q.init();
         q.display(program);
 
+        auto render_end = Time::now();
+        fsec render_time_sec = render_end - render_start;
+        //--------------- BENCH COMPUTE TIME ----------------
+
         // Once rasterisation is done, data have been generated and it is now possible to transfer them back from VRAM to memory.
         unsigned char* data = new unsigned char[image_width * image_height * 3];
         glReadPixels(0, 0, image_width, image_height, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+        auto transfer_end = Time::now();
+        fsec transfer_time_sec = transfer_end - transfer_start;
+        //--------------- BENCH TRANSFER TIME ----------------
+
+        auto total_end = Time::now();
+        fsec total_time_sec = total_end - total_start;
+        //--------------- BENCH TOTAL TIME ----------------
 
         // Switching back to our classic buffer with scene rendered in FBO render texture
         glBindTexture(GL_TEXTURE_2D, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        float milliseconds = t.end();
         std::cout << image_width << " x " << image_height << "\t"
-                  << (size * sizeof(unsigned char)) / 1e6 << "\t\t"
-                  << milliseconds << "\t\t" << (size * sizeof(unsigned char)) / 1e6 / (milliseconds / 1e3)
+                  << (size * sizeof(unsigned char)) / (double)1e6 << "\t\t"
+                  << render_time_sec.count() * 1e3 << "\t\t"
+                  << transfer_time_sec.count() * 1e3 << "\t\t"
+                  << total_time_sec.count() * 1e3 << "\t\t"
+                  << (size * sizeof(unsigned char)) / (double)1e6 / transfer_time_sec.count()
                   << std::endl;
     }
 

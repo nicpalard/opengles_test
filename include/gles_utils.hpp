@@ -1,5 +1,5 @@
-#ifndef _GLES_UTILS_H_
-#define _GLES_UTILS_H_
+#ifndef _GLES_UTILS_HPP_
+#define _GLES_UTILS_HPP_
 
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>

@@ -1,5 +1,5 @@
-#ifndef _QUAD_H_
-#define _QUAD_H_
+#ifndef _QUAD_HPP_
+#define _QUAD_HPP
 
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>

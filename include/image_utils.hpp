@@ -1,5 +1,5 @@
-#ifndef _IMAGE_UTILS_H_
-#define _IMAGE_UTILS_H_
+#ifndef _IMAGE_UTILS_HPP_
+#define _IMAGE_UTILS_HPP_
 
 #include <iostream>
 #include <fstream>
