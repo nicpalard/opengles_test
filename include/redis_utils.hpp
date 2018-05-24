@@ -29,13 +29,15 @@ unsigned char* redis_reply_to_image(redisReply* reply, int width, int height, in
     unsigned int size = width * height;
     unsigned char* image  = new unsigned char[size * channels];
     int cpt = 0;
-    for (int i = 0 ; i < size * 4; i++)
+    for (int i = 0 ; i < size * 3; i++)
     {
+        /*
         if (i%4 == 0)
         {
             continue;
         }
-        image[cpt++] = reply->str[27 + i];
+        */
+        image[cpt++] = reply->str[i];
     }
     return image;
 }

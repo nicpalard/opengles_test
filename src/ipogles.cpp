@@ -2,7 +2,7 @@
 
 #include "quad.hpp"
 #include "gles_utils.hpp"
-#include "image_utils.hpp"
+#include "ImageUtils.hpp"
 
 int main(int argc, char** argv)
 {

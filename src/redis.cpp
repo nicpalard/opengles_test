@@ -1,9 +1,12 @@
+#include <opencv2/opencv.hpp>
 #include <hiredis/hiredis.h>
 
 #include "quad.hpp"
 #include "gles_utils.hpp"
-#include "image_utils.hpp"
 #include "redis_utils.hpp"
+#include "RedisCameraClient.hpp"
+#include "RedisCameraServer.hpp"
+#include "ImageUtils.hpp"
 
 int main(int argc, char** argv)
 {
@@ -13,14 +16,21 @@ int main(int argc, char** argv)
     }
 
     //0. Prepare image texture
-    // Getting image from redis server hosted on 127.0.0.1:6379
-    // Image access key is: nectar:jiii-mi:camera-server:camera#0
-    // Image format is RGBA
-    // There is 27 extra bytes in the buffer
-    int image_width = 640, image_height = 480;
-    redisContext *c = redis_connect("127.0.0.1", 6379, true);
-    if ( c == NULL || c->err) { std::cerr << "Context error: " << c->errstr << std::endl; return EXIT_FAILURE;}
-    unsigned char* image = redis_get_image(c, "nectar:jiii-mi:camera-server:camera#0", image_width, image_height);
+    // Get image from webcam into redis
+    RedisCameraServer server;
+    server.setCameraKey("custom:image:output2");
+    server.start();
+    server.pickUpCameraFrame();
+
+    // Get image from redis
+    RedisCameraClient client;
+    client.connect();
+    client.setCameraKey("custom:image:output2");
+
+    CameraFrame* frame = client.getCameraFrame();
+    int image_width = frame->width(), image_height = frame->height();
+    unsigned char* image = frame->data();
+
 
     //1. Get a EGL valid display
     EGLDisplay display;
@@ -152,7 +162,7 @@ int main(int argc, char** argv)
 
     // Save image (optional)
     write_ppm(argv[3], data, image_width, image_height);
-    redis_set_image(c, "image:proc:output", data, image_width, image_height, 3);
+    //redis_set_image(c, "image:proc:output", data, image_width, image_height, 3);
 
     //10. Clean
     glDeleteTextures(1, &image_texture);
@@ -163,7 +173,7 @@ int main(int argc, char** argv)
     eglTerminate(display);
     delete_fbo(fbo, fbo_render_texture);
 
-    redisFree(c);
+    //redisFree(c);
 
     return EXIT_SUCCESS;
 }

@@ -8,7 +8,7 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake/modu
 find_package (OpenGLES2 REQUIRED)
 set (LIBRARIES GLESv2 EGL)
 
-find_package( OpenCV REQUIRED core opencv_imgcodecs)
+find_package( OpenCV REQUIRED core opencv_imgcodecs opencv_videoio)
 if (NOT OPENCV_FOUND)
         message(FATAL_ERROR, "OpenCV not found.")
 endif()
@@ -31,6 +31,8 @@ set (BENCH_SOURCES
 
 set (REDIS_SOURCES
         src/redis.cpp
+        src/RedisCameraClient.cpp
+        src/RedisCameraServer.cpp
         src/quad.cpp
 )
 
@@ -41,6 +43,6 @@ add_executable (ip_bench ${BENCH_SOURCES} ${HEADERS})
 target_link_libraries (ip_bench ${LIBRARIES})
 
 add_executable (ip_redis ${REDIS_SOURCES} ${HEADERS})
-target_link_libraries (ip_redis ${LIBRARIES} hiredis)
+target_link_libraries (ip_redis ${LIBRARIES} ${OpenCV_LIBS} hiredis)
 
 add_custom_target (shaders ${SHADERS})
