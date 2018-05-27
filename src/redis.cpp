@@ -4,7 +4,7 @@
 #include "quad.hpp"
 #include "gles_utils.hpp"
 #include "redis_utils.hpp"
-#include "RedisCameraClient.hpp"
+#include <RedisCameraClient.hpp>
 #include "RedisCameraServer.hpp"
 #include "ImageUtils.hpp"
 
@@ -16,18 +16,22 @@ int main(int argc, char** argv)
     }
 
     //0. Prepare image texture
-    // Get image from webcam into redis
+    //Get image from webcam into redis
     RedisCameraServer server;
-    server.setCameraKey("custom:image:output2");
-    server.start();
+    if (!server.start()) { std::cerr << "Could not get webcam frame." << std::endl; return EXIT_FAILURE; }
+    server.setCameraKey("custom:image");
     server.pickUpCameraFrame();
 
     // Get image from redis
     RedisCameraClient client;
-    client.connect();
-    client.setCameraKey("custom:image:output2");
+    if (!client.connect()) { std::cerr << "Could not connect to the server." << std::endl; return EXIT_FAILURE; }
+    client.setCameraKey("custom:image");
 
     CameraFrame* frame = client.getCameraFrame();
+    if (frame == NULL)
+    {
+        return EXIT_FAILURE;
+    }
     int image_width = frame->width(), image_height = frame->height();
     unsigned char* image = frame->data();
 
@@ -162,6 +166,7 @@ int main(int argc, char** argv)
 
     // Save image (optional)
     write_ppm(argv[3], data, image_width, image_height);
+    client.setCameraFrame(new CameraFrame(image_width, image_height, 3, data), true);
     //redis_set_image(c, "image:proc:output", data, image_width, image_height, 3);
 
     //10. Clean
