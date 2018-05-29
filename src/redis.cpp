@@ -3,30 +3,61 @@
 
 #include "quad.hpp"
 #include "gles_utils.hpp"
-#include "redis_utils.hpp"
 #include <RedisCameraClient.hpp>
 #include "RedisCameraServer.hpp"
 #include "ImageUtils.hpp"
 
+static bool isPowerOfTwo(int x)
+{
+    return (x != 0) && ((x & (x - 1)) == 0);
+}
+
 int main(int argc, char** argv)
 {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <vertex shader path> <fragment shader path> <output file>" << std::endl;
+    if (argc < 5) {
+        std::cerr << "Usage: " << argv[0] << " <vertex shader path> <fragment shader path> <output file> <fake|camera frame> <size>" << std::endl;
         return EXIT_FAILURE;
     }
 
-    //0. Prepare image texture
-    //Get image from webcam into redis
-    RedisCameraServer server;
-    if (!server.start()) { std::cerr << "Could not get webcam frame." << std::endl; return EXIT_FAILURE; }
-    server.setCameraKey("custom:image");
-    server.pickUpCameraFrame();
-
-    // Get image from redis
     RedisCameraClient client;
-    if (!client.connect()) { std::cerr << "Could not connect to the server." << std::endl; return EXIT_FAILURE; }
-    client.setCameraKey("custom:image");
+    if (!client.connect()) { std::cerr << "Error: Could not connect to the server." << std::endl; return EXIT_FAILURE; }
 
+    std::string cameraKey;
+    //0. Prepare image texture
+    if (strcmp(argv[4], "camera") == 0)
+    {
+        //Get image from webcam into redis
+        RedisCameraServer server;
+        std::string gstCommand = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)I420, framerate=(fraction)120/1, queue-size=2, blockSize=16384, auto-exposure=1, scene-mode=1, flicker=0"
+                                "! nvvidconv flip-method=0 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+
+        if (!server.start(gstCommand)) { std::cerr << "Could not get webcam frame." << std::endl; return EXIT_FAILURE; }
+
+        cameraKey = "custom:image";
+        server.setCameraKey(cameraKey);
+        server.pickUpCameraFrame();
+
+        client.setCameraKey(cameraKey);
+    }
+    else
+    {
+        if (argc != 6)
+        {
+            std::cerr << "When using a fake frame, you should provide fake frame size as well." << std::endl;
+            return EXIT_FAILURE;
+        }
+        int size = atoi(argv[5]);
+        if (!isPowerOfTwo(size)) { std::cerr << "Error: Specified size must be power of 2." << std::endl; return EXIT_FAILURE; }
+
+        unsigned char* tmpdata = float_to_uchar(generate_random_image(size, size, 3), size * size * 3);
+
+        CameraFrame* frame = new CameraFrame(size, size, 3, tmpdata);
+        cameraKey = "custom:image:fake";
+        client.setCameraKey(cameraKey);
+        client.setCameraFrame(frame);
+    }
+
+    // Get camera frame from redis
     CameraFrame* frame = client.getCameraFrame();
     if (frame == NULL)
     {
@@ -34,7 +65,6 @@ int main(int argc, char** argv)
     }
     int image_width = frame->width(), image_height = frame->height();
     unsigned char* image = frame->data();
-
 
     //1. Get a EGL valid display
     EGLDisplay display;
@@ -165,9 +195,8 @@ int main(int argc, char** argv)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // Save image (optional)
-    write_ppm(argv[3], data, image_width, image_height);
     client.setCameraFrame(new CameraFrame(image_width, image_height, 3, data), true);
-    //redis_set_image(c, "image:proc:output", data, image_width, image_height, 3);
+    write_ppm(argv[3], data, image_width, image_height);
 
     //10. Clean
     glDeleteTextures(1, &image_texture);
@@ -177,8 +206,6 @@ int main(int argc, char** argv)
     eglDestroyContext(display, context);
     eglTerminate(display);
     delete_fbo(fbo, fbo_render_texture);
-
-    //redisFree(c);
 
     return EXIT_SUCCESS;
 }

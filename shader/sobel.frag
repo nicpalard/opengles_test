@@ -30,7 +30,7 @@ void main() {
     vec2 rbot  = texcoord + vec2(wstep, hstep);
 
     // We convert image to GRAY by summing the 3 channels & dividing by 3.
-    // vec3(a, vec3(1)) will sum a since dot product is vec1.x * vec2.x + vec1.y * vec2.y ...
+    // dot(a, vec3(1)) will sum a since dot product is vec1.x * vec2.x + vec1.y * vec2.y ...
     vec3 left_color  = vec3(dot(texture2D(texture, left).rgb, vec3(1)))/3.0;
     vec3 right_color = vec3(dot(texture2D(texture, right).rgb, vec3(1)))/3.0;
     vec3 top_color   = vec3(dot(texture2D(texture, top).rgb, vec3(1)))/3.0;
