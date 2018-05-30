@@ -3,7 +3,7 @@
 
 #include "quad.hpp"
 #include "gles_utils.hpp"
-#include <RedisCameraClient.hpp>
+#include <RedisImageHelper.hpp>
 #include "RedisCameraServer.hpp"
 #include "ImageUtils.hpp"
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    RedisCameraClient client;
+    RedisImageHelper client;
     if (!client.connect()) { std::cerr << "Error: Could not connect to the server." << std::endl; return EXIT_FAILURE; }
 
     std::string cameraKey;
@@ -51,14 +51,14 @@ int main(int argc, char** argv)
 
         unsigned char* tmpdata = float_to_uchar(generate_random_image(size, size, 3), size * size * 3);
 
-        CameraFrame* frame = new CameraFrame(size, size, 3, tmpdata);
+        Image* frame = new Image(size, size, 3, tmpdata);
         cameraKey = "custom:image:fake";
         client.setCameraKey(cameraKey);
-        client.setCameraFrame(frame);
+        client.setImage(frame);
     }
 
     // Get camera frame from redis
-    CameraFrame* frame = client.getCameraFrame();
+    Image* frame = client.getImage();
     if (frame == NULL)
     {
         return EXIT_FAILURE;
@@ -195,7 +195,7 @@ int main(int argc, char** argv)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // Save image (optional)
-    client.setCameraFrame(new CameraFrame(image_width, image_height, 3, data), true);
+    client.setImage(new Image(image_width, image_height, 3, data), true);
     write_ppm(argv[3], data, image_width, image_height);
 
     //10. Clean
